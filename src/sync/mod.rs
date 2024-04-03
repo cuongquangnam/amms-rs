@@ -1,7 +1,6 @@
 use crate::{
     amm::{
-        factory::{AutomatedMarketMakerFactory, Factory},
-        uniswap_v2, uniswap_v3, AutomatedMarketMaker, AMM,
+        factory::{AutomatedMarketMakerFactory, Factory}, uniswap_v2, uniswap_v3, uniswap_v3_customized, AutomatedMarketMaker, AMM
     },
     errors::AMMError,
     filters,
@@ -142,6 +141,17 @@ pub async fn populate_amms<M: Middleware>(
             AMM::ERC4626Vault(_) => {
                 for amm in amms {
                     amm.populate_data(None, middleware.clone()).await?;
+                }
+            }
+
+            AMM::UniswapV3PoolCustomized(_) => {
+                let step = 76;
+                for amm_chunk in amms.chunks_mut(step) {
+                    uniswap_v3_customized::batch_request::get_amm_data_batch_request(
+                        amm_chunk,
+                        block_number,
+                        middleware.clone(),
+                    ).await?;
                 }
             }
         }

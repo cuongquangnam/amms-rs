@@ -2,6 +2,7 @@ pub mod erc_4626;
 pub mod factory;
 pub mod uniswap_v2;
 pub mod uniswap_v3;
+pub mod uniswap_v3_customized;
 
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::{AMMError, ArithmeticError, EventLogError, SwapSimulationError};
 
-use self::{erc_4626::ERC4626Vault, uniswap_v2::UniswapV2Pool, uniswap_v3::UniswapV3Pool};
+use self::{erc_4626::ERC4626Vault, uniswap_v2::UniswapV2Pool, uniswap_v3::UniswapV3Pool, uniswap_v3_customized::UniswapV3PoolCustomized};
 
 #[async_trait]
 pub trait AutomatedMarketMaker {
@@ -133,4 +134,4 @@ macro_rules! amm {
     };
 }
 
-amm!(UniswapV2Pool, UniswapV3Pool, ERC4626Vault);
+amm!(UniswapV2Pool, UniswapV3Pool, ERC4626Vault, UniswapV3PoolCustomized);

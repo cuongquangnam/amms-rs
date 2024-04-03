@@ -87,6 +87,7 @@ where
                 AMM::UniswapV2Pool(_) => 0,
                 AMM::UniswapV3Pool(_) => 1,
                 AMM::ERC4626Vault(_) => 2,
+                AMM::UniswapV3PoolCustomized(_) => 3,
             };
 
             if !amm_variants.contains(&variant) {
@@ -96,7 +97,9 @@ where
         }
 
         //Create a new filter
-        Filter::new().topic0(event_signatures)
+        let filter = Filter::new().topic0(event_signatures);
+        println!("Filter is {:?}", filter);
+        filter
     }
 
     /// Listens to new blocks and handles state changes, sending a Vec<H160> containing each AMM address that incurred a state change in the block.

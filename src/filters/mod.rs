@@ -23,6 +23,13 @@ pub fn filter_empty_amms(amms: Vec<AMM>) -> Vec<AMM> {
                     cleaned_amms.push(amm)
                 }
             }
+            AMM::UniswapV3PoolCustomized(ref uniswap_v3_pool_customized) => {
+                if !uniswap_v3_pool_customized.token_a.is_zero()
+                    && !uniswap_v3_pool_customized.token_b.is_zero()
+                {
+                    cleaned_amms.push(amm)
+                }
+            }
         }
     }
 
