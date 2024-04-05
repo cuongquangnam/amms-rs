@@ -3,7 +3,7 @@ use std::{sync::Arc, vec};
 use ethers::{
     abi::{ParamType, Token},
     providers::Middleware,
-    types::{Bytes, I256, U256, U64},
+    types::{Bytes, I256},
 };
 use tracing::instrument;
 
@@ -18,12 +18,7 @@ use ethers::prelude::abigen;
 
 abigen!(
     IGetUniswapV3PoolDataBatchRequest,
-    "src/amm/uniswap_v3/batch_request/GetUniswapV3PoolDataBatchRequestABI.json";
-    IGetUniswapV3TickDataBatchRequest,
-    "src/amm/uniswap_v3/batch_request/GetUniswapV3TickDataBatchRequestABI.json";
-    ISyncUniswapV3PoolBatchRequest,
-    "src/amm/uniswap_v3/batch_request/SyncUniswapV3PoolBatchRequestABI.json";
-
+    "src/amm/uniswap_v3_customized/batch_request/GetUniswapV3PoolDataBatchRequestABI.json"
 );
 
 fn populate_pool_data_from_tokens(
@@ -94,140 +89,6 @@ pub struct UniswapV3TickData {
     pub initialized: bool,
     pub tick: i32,
     pub liquidity_net: i128,
-}
-
-pub async fn get_uniswap_v3_tick_data_batch_request<M: Middleware>(
-    pool: &UniswapV3PoolCustomized,
-    tick_start: i32,
-    zero_for_one: bool,
-    num_ticks: u16,
-    block_number: Option<U64>,
-    middleware: Arc<M>,
-) -> Result<(Vec<UniswapV3TickData>, U64), AMMError<M>> {
-    let constructor_args = Token::Tuple(vec![
-        Token::Address(pool.address),
-        Token::Bool(zero_for_one),
-        Token::Int(I256::from(tick_start).into_raw()),
-        Token::Uint(U256::from(num_ticks)),
-        Token::Int(I256::from(pool.tick_spacing).into_raw()),
-    ]);
-
-    let deployer = IGetUniswapV3TickDataBatchRequest::deploy(middleware.clone(), constructor_args)?;
-
-    let return_data: Bytes = if let Some(block_number) = block_number {
-        deployer.block(block_number).call_raw().await?
-    } else {
-        deployer.call_raw().await?
-    };
-
-    let return_data_tokens = ethers::abi::decode(
-        &[
-            ParamType::Array(Box::new(ParamType::Tuple(vec![
-                ParamType::Bool,
-                ParamType::Int(24),
-                ParamType::Int(128),
-            ]))),
-            ParamType::Uint(32),
-        ],
-        &return_data,
-    )?;
-
-    let tick_data_array = return_data_tokens[0]
-        .to_owned()
-        .into_array()
-        .ok_or(AMMError::BatchRequestError(pool.address))?;
-    let mut tick_data = vec![];
-
-    for tokens in tick_data_array {
-        if let Some(tick_data_tuple) = tokens.into_tuple() {
-            let initialized = tick_data_tuple[0]
-                .to_owned()
-                .into_bool()
-                .ok_or(AMMError::BatchRequestError(pool.address))?;
-
-            let initialized_tick = I256::from_raw(
-                tick_data_tuple[1]
-                    .to_owned()
-                    .into_int()
-                    .ok_or(AMMError::BatchRequestError(pool.address))?,
-            )
-            .as_i32();
-
-            let liquidity_net = I256::from_raw(
-                tick_data_tuple[2]
-                    .to_owned()
-                    .into_int()
-                    .ok_or(AMMError::BatchRequestError(pool.address))?,
-            )
-            .as_i128();
-
-            tick_data.push(UniswapV3TickData {
-                initialized,
-                tick: initialized_tick,
-                liquidity_net,
-            });
-        }
-    }
-
-    let block_number = return_data_tokens[1]
-        .to_owned()
-        .into_uint()
-        .ok_or(AMMError::BatchRequestError(pool.address))?;
-
-    Ok((tick_data, U64::from(block_number.as_u64())))
-}
-
-pub async fn sync_v3_pool_batch_request<M: Middleware>(
-    pool: &mut UniswapV3PoolCustomized,
-    middleware: Arc<M>,
-) -> Result<(), AMMError<M>> {
-    let constructor_args = Token::Tuple(vec![Token::Address(pool.address)]);
-
-    let deployer = ISyncUniswapV3PoolBatchRequest::deploy(middleware.clone(), constructor_args)?;
-
-    let return_data: Bytes = deployer.call_raw().await?;
-    let return_data_tokens = ethers::abi::decode(
-        &[ParamType::Tuple(vec![
-            ParamType::Uint(128), // liquidity
-            ParamType::Uint(160), // sqrtPrice
-            ParamType::Int(24),   // tick
-            ParamType::Int(128),  // liquidityNet
-        ])],
-        &return_data,
-    )?;
-
-    for tokens in return_data_tokens {
-        if let Some(pool_data) = tokens.into_tuple() {
-            //If the sqrt_price is not zero, signaling that the pool data was populated
-            if pool_data[1]
-                .to_owned()
-                .into_uint()
-                .ok_or(AMMError::BatchRequestError(pool.address))?
-                .is_zero()
-            {
-                return Err(AMMError::BatchRequestError(pool.address));
-            } else {
-                pool.liquidity = pool_data[0]
-                    .to_owned()
-                    .into_uint()
-                    .ok_or(AMMError::BatchRequestError(pool.address))?
-                    .as_u128();
-                pool.sqrt_price = pool_data[1]
-                    .to_owned()
-                    .into_uint()
-                    .ok_or(AMMError::BatchRequestError(pool.address))?;
-                pool.tick = I256::from_raw(
-                    pool_data[2]
-                        .to_owned()
-                        .into_int()
-                        .ok_or(AMMError::BatchRequestError(pool.address))?,
-                )
-                .as_i32();
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[instrument(skip(middleware) level = "debug")]

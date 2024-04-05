@@ -59,7 +59,7 @@ abigen!(
 
 pub const MIN_SQRT_RATIO: U256 = U256([4295128739, 0, 0, 0]);
 pub const MAX_SQRT_RATIO: U256 = U256([6743328256752651558, 17280870778742802505, 4294805859, 0]);
-pub const POPULATE_TICK_DATA_STEP: u64 = 100000;
+pub const POPULATE_TICK_DATA_STEP: u64 = 1_000_000;
 pub const SWAP_EVENT_SIGNATURE: H256 = H256([
     25, 180, 114, 121, 37, 107, 42, 35, 161, 102, 92, 129, 12, 141, 85, 161, 117, 137, 64, 238, 9,
     55, 125, 79, 141, 38, 73, 122, 53, 119, 220, 131,
@@ -121,7 +121,8 @@ impl AutomatedMarketMaker for UniswapV3PoolCustomized {
 
     #[instrument(skip(self, middleware), level = "debug")]
     async fn sync<M: Middleware>(&mut self, middleware: Arc<M>) -> Result<(), AMMError<M>> {
-        batch_request::sync_v3_pool_batch_request(self, middleware.clone()).await?;
+        // batch_request::sync_v3_pool_batch_request(self, middleware.clone()).await?;
+        // to do: to fix later
         Ok(())
     }
 
