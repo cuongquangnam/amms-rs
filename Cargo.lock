@@ -4619,7 +4619,8 @@ checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
 [[package]]
 name = "uniswap_v3_math"
 version = "0.4.1"
-source = "git+https://github.com/0xKitsune/uniswap-v3-math.git?branch=main#0d4de89977bf6d70b0ed8bd43ecd31d8e8e70dfa"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9caace7daea8ca46065d164eba7faf75523f33a12ff4dd2467f9e28f7f667969"
 dependencies = [
  "ethers",
  "eyre",
